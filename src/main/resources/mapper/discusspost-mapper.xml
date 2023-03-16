@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="koumakan.javaweb.community.dao.DiscussPostMapper">
+
+  <!-- 将sql中重复的字段单独提取出来 写一个sql标签  /!-->
+  <sql id="allFields">
+    id , user_id, title, content, type, status, create_time, comment_count, score
+  </sql>
+
+
+  <!-- 每一个select标签都标识了UserMapper中的一个方法  /!-->
+  <!--
+      ${value}，#{参数名}
+      ${}是拼接符，传入的内容拼接在sql中且不进行jdbc类型的转换；
+      #{}是占位符，通过#{}可以设置值并自动进行java和jdbc的类型转换。
+    /!-->
+  <select id="selectPosts" resultType="DiscussPost">
+    select <include refid="allFields"></include>
+    from discuss_post
+    where status != 2
+    <if test="userId!=0">
+      and user_id = #{userId}
+    </if>
+    order by type desc, create_time desc
+    limit #{offset}, #{limit}
+  </select>
+
+  <select id="selectPostsCnt" resultType="int">
+    select count(id)
+    from discuss_post
+    where status != 2
+    <if test="userId!=0">
+      and user_id = #{userId}
+    </if>
+  </select>
+
+
+
+
+</mapper>
