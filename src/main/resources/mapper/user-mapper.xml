@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="koumakan.javaweb.community.dao.UserMapper">
+
+    <!-- 将sql中重复的字段单独提取出来 写一个sql标签  /!-->
+    <sql id="selectAllFields">
+        id , username, password, salt, email, type, status, activation_code, header_url, create_time
+    </sql>
+
+    <sql id="insertAllFields">
+        id , username, password, salt, email, type, status, activation_code, header_url, create_time
+    </sql>
+
+    <!-- 每一个select标签都标识了UserMapper中的一个方法  /!-->
+    <!--
+        ${value}，#{参数名}
+        ${}是拼接符，传入的内容拼接在sql中且不进行jdbc类型的转换；
+        #{}是占位符，通过#{}可以设置值并自动进行java和jdbc的类型转换。
+      /!-->
+    <select id="selectById" resultType="User">
+        select <include refid="selectAllFields"></include>
+        from user
+        where id = #{id}
+    </select>
+
+    <select id="selectByName" resultType="User">
+        select <include refid="selectAllFields"></include>
+        from user
+        where username = #{username}
+    </select>
+
+    <select id="selectByEmail" resultType="User">
+        select <include refid="selectAllFields"></include>
+        from user
+        where email = #{email}
+    </select>
+
+    <insert id="insertUser" parameterType="User" keyProperty="id">
+        insert into user (<include refid="insertAllFields"></include>)
+        values(#{username}, #{password}, #{salt}, #{email}, #{type}, #{status}, #{activationCode}, #{headerUrl}, #{createTime})
+    </insert>
+
+    <!-- 除select语句之外，其他DML语句的返回值固定为int，也就是默认返回改动的行数  /!-->
+    <update id="updateStatus">
+        update user set status = #{status} where id = #{id}
+    </update>
+
+
+
+    <update id="updateHeader">
+        update user set header_url = #{headerUrl} where id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        update user set password = #{password} where id = #{id}
+    </update>
+
+
+</mapper>
