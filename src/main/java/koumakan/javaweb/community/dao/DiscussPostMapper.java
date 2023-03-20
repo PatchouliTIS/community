@@ -26,7 +26,7 @@ public interface DiscussPostMapper {
      * @param limit  每一页最大展示多少数据项
      * @return List 用户发帖的列表
      */
-    List<DiscussPost> selectPosts(int userId, int offset, int limit);
+    List<DiscussPost> selectPosts(@Param("userId") int userId, int offset, int limit);
 
 
     /**
