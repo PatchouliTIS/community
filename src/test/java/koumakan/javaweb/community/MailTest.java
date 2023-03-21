@@ -18,6 +18,7 @@ import org.thymeleaf.context.Context;
  * @Author: Alice Maetra
  * @Date: 2023/3/20 18:23
  * @Decription:
+ *      测试发送邮件功能
  */
 
 @SpringBootTest

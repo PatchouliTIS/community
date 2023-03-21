@@ -10,7 +10,7 @@
     </sql>
 
     <sql id="insertAllFields">
-        id , username, password, salt, email, type, status, activation_code, header_url, create_time
+        username, password, salt, email, type, status, activation_code, header_url, create_time
     </sql>
 
     <!-- 每一个select标签都标识了UserMapper中的一个方法  /!-->
