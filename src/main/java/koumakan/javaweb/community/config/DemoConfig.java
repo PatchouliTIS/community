@@ -13,7 +13,7 @@ import java.text.SimpleDateFormat;
  */
 
 @Configuration
-public class AlphaConfig {
+public class DemoConfig {
 
     @Bean
     public SimpleDateFormat simpleDateFormat() {
