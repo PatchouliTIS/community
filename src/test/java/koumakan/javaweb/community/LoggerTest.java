@@ -24,7 +24,7 @@ public class LoggerTest {
     @Test
     public void testLogger() {
         System.out.println(logger.getName());
-        logger.debug("FUCK");
+        logger.debug(">>>debug set<<<");
         logger.info("info");
         logger.warn("warn");
 

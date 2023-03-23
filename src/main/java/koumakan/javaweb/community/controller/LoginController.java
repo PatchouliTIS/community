@@ -2,15 +2,21 @@ package koumakan.javaweb.community.controller;
 
 import com.google.code.kaptcha.Producer;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import koumakan.javaweb.community.dao.LoginTicketMapper;
 import koumakan.javaweb.community.entity.User;
 import koumakan.javaweb.community.service.UserService;
+import koumakan.javaweb.community.util.CommunityConstant;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -20,6 +26,9 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+
+import static koumakan.javaweb.community.util.CommunityConstant.DEFAULT_EXPIRED_SECONDS;
+import static koumakan.javaweb.community.util.CommunityConstant.REMEMBER_EXPIRED_SECONDS;
 
 /**
  * @Package: koumakan.javaweb.community.controller
@@ -36,6 +45,9 @@ public class LoginController {
 
     @Autowired
     private Producer kaptchaProducer;
+
+    @Value("${server.servlet.context-path}")
+    private String ROOT_PATH;
 
 
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
@@ -57,9 +69,73 @@ public class LoginController {
 
 
     /**
+     * 注意：当发起一个POST请求时我们没有给参数定义一个Entity实体类，那么
+     * SpringMVC就不会自动将这些零散变量装入Model中去。我们需要：
+     *      1. 手动在本方法内部进行Model的手动装载
+     *      2. 在html文件中使用 ${param.[param_id]} 方法获取表单数据
+     *          这种方法的param_id需要和本方法中定义的参数名一致
+     *
+     *
+     * @param model
+     * @param httpSession
+     * @param response  将服务器生成的session对应的ticket通过cookie传递给客户端让Client保存
+     * @param username
+     * @param password
+     * @param code
+     * @param rememberMe
+     * @return
+     */
+    @RequestMapping(path = "/login", method = RequestMethod.POST)
+    public String login(Model model, HttpSession httpSession, HttpServletResponse response,
+                        String username, String password,
+                        String code, boolean rememberMe) {
+        String kaptcha = (String) httpSession.getAttribute("kaptcha");
+        // 验证码的检查
+        if(StringUtils.isBlank(kaptcha)
+                || StringUtils.isBlank(code)
+                || !kaptcha.equalsIgnoreCase(code)) {
+            model.addAttribute("codeMsg", "验证码不正确");
+            return "/site/login";
+        }
+
+        // 验证账号和密码
+        // 因为登录凭证都是放在数据库中保存，因此《记住我》这一勾选项目只是决定了
+        // 登录凭证的expired，也就是超时时间的长短
+        // 1. 设置登录认证凭证超时时间
+        int expiredSeconds = rememberMe ? REMEMBER_EXPIRED_SECONDS : DEFAULT_EXPIRED_SECONDS;
+        // 2. 登录，使用userService的功能
+        Map<String, Object> map = userService.login(username, password, expiredSeconds);
+
+        if(map.containsKey("ticket")) {
+            // 使用Cookie保存loginTicket
+            Cookie cookie = new Cookie("ticket", map.get("ticket").toString());
+            cookie.setPath(ROOT_PATH);
+            cookie.setMaxAge(expiredSeconds);
+            response.addCookie(cookie);
+            return "redirect:/index";
+        } else {
+            model.addAllAttributes(map);
+            // model.addAttribute("usernameMsg", map.get("usernameMsg"));
+            // model.addAttribute("userpswdMsg", map.get("userpswdMsg"));
+            // model.addAttribute("userEntityMsg", map.get("userEntityMsg"));
+            // model.addAttribute("userActivationMsg", map.get("userActivationMsg"));
+            return "/site/login";
+        }
+    }
+
+    @RequestMapping(path = "/logout", method = RequestMethod.GET)
+    public String logout(@CookieValue("ticket") String ticket) {
+        userService.logout(ticket);
+        return "redirect:/login";
+    }
+
+
+
+
+    /**
      * 前端的表单获取用户注册的数据，传递给表现层Controller后读取到对应的name属性中去
      * @param model
-     * @param user
+     * @param user 前端页面通过 <input ... > 来获取User实体类中对应的成员属性数据。
      * @return
      */
     @RequestMapping(path = "/register", method = RequestMethod.POST)
@@ -117,6 +193,8 @@ public class LoginController {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
+
+
+
 }

@@ -4,7 +4,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.mail.MessagingException;
 import koumakan.javaweb.community.dao.IUserDao;
+import koumakan.javaweb.community.dao.LoginTicketMapper;
 import koumakan.javaweb.community.dao.UserMapper;
+import koumakan.javaweb.community.entity.LoginTicket;
 import koumakan.javaweb.community.entity.User;
 import koumakan.javaweb.community.util.CommunityConstant;
 import koumakan.javaweb.community.util.CommunityUtil;
@@ -49,8 +51,17 @@ public class UserService implements CommunityConstant {
     @Qualifier("mailClient")
     private MailClient mailClient;
 
+
+    /**
+     * 生成Thymeleaf动态模板
+     */
     @Autowired
     private TemplateEngine templateEngine;
+
+
+    @Autowired
+    private LoginTicketMapper loginTicketMapper;
+
 
     /**
      * 通过SpringBeanFactory分析配置文件，获取配置文件中的值的信息。
@@ -141,8 +152,9 @@ public class UserService implements CommunityConstant {
         User user = userMapper.selectById(userId);
         if(user.getStatus() == 1) {
             return ACTIVATION_REPEAT;
-        }else if(user.getActivationCode().equals(activation_code)) {
+        }else if(user.getActivationCode().equals(activation_code) == true) {
             // 将用户激活码对比
+            userMapper.updateStatus(userId, 1);
             return ACTIVATION_SUCCESS;
         }else {
             return ACTIVATION_FAILURE;
@@ -150,6 +162,71 @@ public class UserService implements CommunityConstant {
     }
 
 
+    public Map<String, Object> login(String username, String password, int expired) {
+        Map<String, Object> map = new HashMap<>();
+
+        // 空值处理
+        if(StringUtils.isBlank(username)) {
+            map.put("usernameMsg", "用户名为空！");
+            return map;
+        }
+        if(StringUtils.isBlank(password)) {
+            map.put("userpswdMsg", "密码为空！");
+            return map;
+        }
+
+        // 验证账号
+        User curUser = userMapper.selectByName(username);
+        if(curUser == null) {
+            map.put("usernameMsg", "该用户不存在！");
+            return map;
+        }
+        // 没有激活！
+        if(curUser.getStatus() == 0) {
+            map.put("usernameMsg", "该用户仍未激活！");
+            return map;
+        }
+        // 验证密码
+        // 因为传入的密码是明文。需要进行MD5加密后再与user中密码进行比较
+        // 记得加上salt
+        password = CommunityUtil.md5(password + curUser.getSalt());
+        if(password.equals(curUser.getPassword()) == false) {
+            map.put("userpswdMsg", "密码输入错误！");
+            return map;
+        }
+
+
+        // 生成登录凭证
+        LoginTicket loginTicket = new LoginTicket();
+        loginTicket.setUserId(curUser.getId());
+        //  status 设为 0，在loginTicket表中是有效
+        loginTicket.setStatus(0);
+        // 生成随机登录凭证
+        loginTicket.setTicket(CommunityUtil.generateUUID());
+        loginTicket.setExpired(new Date(System.currentTimeMillis() + expired * 1000));
+
+        loginTicketMapper.insertLoginTicket(loginTicket);
+
+        // 将ticket作为用户的一种session用于从loginTicket表中快速获取对应用户的登录认证
+        map.put("ticket", loginTicket.getTicket());
+
+        return map;
+    }
+
+    public void logout(String ticket) {
+        loginTicketMapper.updateStatus(ticket, 1);
+    }
+
+
+    public LoginTicket findLoginTicketByTicket (String ticket) {
+        if(StringUtils.isBlank(ticket)) {
+            throw new IllegalArgumentException("TICKET为空！");
+        }
+
+        LoginTicket loginTicket = loginTicketMapper.selectByTicket(ticket);
+
+        return loginTicket;
+    }
 
 
     @PostConstruct
@@ -164,6 +241,5 @@ public class UserService implements CommunityConstant {
 
     public String useDao() {
         return this._alphaUserDao.toString();
-
     }
 }
