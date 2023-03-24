@@ -1,6 +1,8 @@
 package koumakan.javaweb.community.config;
 
+import koumakan.javaweb.community.annotation.LoginAuthority;
 import koumakan.javaweb.community.controller.interceptor.DemoInterceptor;
+import koumakan.javaweb.community.controller.interceptor.LoginAuthorityInterceptor;
 import koumakan.javaweb.community.controller.interceptor.LoginTicketInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +26,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Autowired
     private LoginTicketInterceptor loginTicketInterceptor;
 
+    @Autowired
+    private LoginAuthorityInterceptor loginAuthorityInterceptor;
 
     /**
      * 演示如何使用WebMvc的register
@@ -37,6 +41,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // WebMvcConfigurer.super.addInterceptors(registry);
 
         registry.addInterceptor(loginTicketInterceptor)
+                .excludePathPatterns("/**/*.css", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.js");
+
+        registry.addInterceptor(loginAuthorityInterceptor)
                 .excludePathPatterns("/**/*.css", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.js");
     }
 
