@@ -20,7 +20,7 @@ import java.util.List;
 public interface DiscussPostMapper {
 
     /**
-     *
+     * 用于生成论坛主页面
      * @param userId
      * @param offset 用户所发帖占用的数据库页数
      * @param limit  每一页最大展示多少数据项
@@ -40,5 +40,11 @@ public interface DiscussPostMapper {
     int selectPostsCnt(@Param("userId")  int userId);
 
     int insertDiscussPost(DiscussPost discussPost);
+
+    DiscussPost selectPostById(@Param("id") int id);
+
+
+
+
 
 }

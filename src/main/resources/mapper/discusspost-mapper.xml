@@ -45,4 +45,13 @@
     values(#{userId},#{title},#{content},#{type},#{status},#{createTime},#{commentCount},#{score})
   </insert>
 
+  <select id="selectPostById" resultType="DiscussPost">
+    select <include refid="allFields"></include>
+    from discuss_post
+    where status != 2
+    <if test="id!=0">
+      and id = #{id}
+    </if>
+  </select>
+
 </mapper>

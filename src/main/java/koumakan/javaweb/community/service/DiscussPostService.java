@@ -42,7 +42,7 @@ public class DiscussPostService {
         }
 
         // 处理标题和内容的敏感词
-        // 1. 先将HTML标签中的符号<>转义
+        // 1. 先将HTML标签中的符号<>转义，防止恶意注入
         discussPost.setTitle(HtmlUtils.htmlEscape(discussPost.getTitle()));
         discussPost.setContent(HtmlUtils.htmlEscape(discussPost.getContent()));
 
@@ -58,4 +58,7 @@ public class DiscussPostService {
     public int findPostsCnt(int userId) {
         return discussPostMapper.selectPostsCnt(userId);
     }
+
+
+    public DiscussPost findPost(int id) { return discussPostMapper.selectPostById(id); }
 }
