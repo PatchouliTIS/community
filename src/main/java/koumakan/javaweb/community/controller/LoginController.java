@@ -125,6 +125,7 @@ public class LoginController {
 
     @RequestMapping(path = "/logout", method = RequestMethod.GET)
     public String logout(@CookieValue("ticket") String ticket) {
+        // TODO: 前端使用MD5加密密码传输。
         userService.logout(ticket);
         return "redirect:/login";
     }
@@ -140,6 +141,8 @@ public class LoginController {
      */
     @RequestMapping(path = "/register", method = RequestMethod.POST)
     public String register(Model model, User user) throws MessagingException {
+        // TODO: 前端使用MD5加密密码传输。
+
         Map<String, Object> map = userService.register(user);
 
         if(map == null || map.isEmpty()) {

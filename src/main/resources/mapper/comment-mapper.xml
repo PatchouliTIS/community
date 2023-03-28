@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="koumakan.javaweb.community.dao.CommentMapper">
+
+    <!-- 将sql中重复的字段单独提取出来 写一个sql标签  /!-->
+    <sql id="allFields">
+        id , user_id, entity_type, entity_id, target_id, content, status, create_time
+    </sql>
+
+    <sql id="insertFields">
+        user_id, entity_type, entity_id, target_id, content, status, create_time
+    </sql>
+
+
+    <!-- 每一个select标签都标识了UserMapper中的一个方法  /!-->
+    <!--
+        ${value}，#{参数名}
+        ${}是拼接符，传入的内容拼接在sql中且不进行jdbc类型的转换；
+        #{}是占位符，通过#{}可以设置值并自动进行java和jdbc的类型转换。
+      /!-->
+    <select id="selectCommentsByEntity" resultType="Comment">
+        select <include refid="allFields"></include>
+        from comment
+        where status=0
+        and entity_type = #{entityType}
+        and entity_id = #{entityId}
+        order by create_time desc
+        limit #{offset}, #{limit}
+    </select>
+
+    <select id="selectCountByEntity" resultType="int">
+        select count(id)
+        from comment
+        where status=0
+        and entity_type = #{entityType}
+        and entity_id = #{entityId}
+    </select>
+
+    <insert id="insertComment" parameterType="Comment" useGeneratedKeys="true" keyProperty="id">
+        insert into comment(<include refid="insertFields"></include>)
+        values(#{userId}, #{entityType}, #{entityId}, #{targetId}, #{content}, #{status}, #{createTime})
+    </insert>
+
+</mapper>

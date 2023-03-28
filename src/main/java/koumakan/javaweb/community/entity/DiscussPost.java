@@ -77,11 +77,11 @@ public class DiscussPost {
         this.createTime = createTime;
     }
 
-    public int getCommentCnt() {
+    public int getCommentCount() {
         return commentCount;
     }
 
-    public void setCommentCnt(int commentCnt) {
+    public void setCommentCount(int commentCnt) {
         this.commentCount = commentCnt;
     }
 

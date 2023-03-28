@@ -43,7 +43,13 @@ public interface DiscussPostMapper {
 
     DiscussPost selectPostById(@Param("id") int id);
 
-
+    /**
+     * 每次回复一个帖子之后，将当前帖子的回复总数更新
+     * @param postId
+     * @param commentCount
+     * @return
+     */
+    int updateCommentCount(int postId, int commentCount);
 
 
 
