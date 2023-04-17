@@ -69,4 +69,10 @@ public class HomePageController {
         // 必须与路径名一样 因为Thymeleaf需要使用这一字符串去templates中寻找对象
         return "/index";
     }
+
+
+    @RequestMapping(path = "/error", method = RequestMethod.GET)
+    public String getErrorPage() {
+        return "/error/500";
+    }
 }
