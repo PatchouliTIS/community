@@ -48,7 +48,7 @@ public class LoginTicketInterceptor implements HandlerInterceptor {
         //     throw new IllegalArgumentException("TICKET 为空！");
         // }
 
-        if(StringUtils.isBlank(ticket) == false) {
+        if(ticket != null) {
             // 2. 服务器通过cookie发起查询获得用户信息
             LoginTicket loginTicket = userService.findLoginTicketByTicket(ticket);
 

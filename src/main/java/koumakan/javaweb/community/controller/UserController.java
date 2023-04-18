@@ -1,13 +1,16 @@
 package koumakan.javaweb.community.controller;
 
 import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import koumakan.javaweb.community.annotation.LoginAuthority;
 import koumakan.javaweb.community.dao.UserMapper;
 import koumakan.javaweb.community.entity.User;
+import koumakan.javaweb.community.service.LikeService;
 import koumakan.javaweb.community.service.UserService;
 import koumakan.javaweb.community.util.HostHandler;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.ibatis.annotations.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +52,9 @@ public class UserController {
 
     @Autowired
     private HostHandler hostHandler;
+
+    @Resource
+    private LikeService likeService;
 
     @LoginAuthority
     @RequestMapping(path = "/setting", method = RequestMethod.GET)
@@ -140,5 +146,26 @@ public class UserController {
             LOGGER.error("读取头像失败: " + e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+
+
+
+    @RequestMapping(path = "/profile/{userId}", method = RequestMethod.GET)
+    public String getProfilePage(@PathVariable("userId") int userId, Model model) {
+        User user = userService.findUserById(userId);
+        if(user == null) {
+            throw new RuntimeException("查询个人资料失败！该用户不存在！");
+        }
+
+        // 用户
+        model.addAttribute("user", user);
+
+
+        //点赞数量
+        long likeCount = likeService.findUserLikeCount(userId);
+        model.addAttribute("likeCount", likeCount);
+
+        return "/site/profile";
+
     }
 }

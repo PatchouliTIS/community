@@ -21,15 +21,28 @@ public class CookieUtil {
      * @return
      */
     public static String getTicket(HttpServletRequest request, String arg) {
-        Cookie[] cookies = request.getCookies();
 
-        if(request == null || cookies == null || StringUtils.isBlank(arg)) {
-            throw new IllegalArgumentException("参数为空！");
+
+        // 首次登录的用户必然没有cookie 过期了
+        if(request == null || StringUtils.isBlank(arg)) {
+            if(request == null) {
+                throw new IllegalArgumentException("request为空！");
+            }
+
+            if(StringUtils.isBlank(arg)) {
+                throw new IllegalArgumentException("参数为空！");
+            }
+
         }
 
-        for(Cookie c : cookies) {
-            if(c.getName().equals(arg)) {
-                return c.getValue();
+
+        Cookie[] cookies = request.getCookies();
+
+        if(cookies != null) {
+            for(Cookie c : cookies) {
+                if(c.getName().equals(arg)) {
+                    return c.getValue();
+                }
             }
         }
 

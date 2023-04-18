@@ -1,10 +1,14 @@
 package koumakan.javaweb.community.controller;
 
+import jakarta.annotation.Resource;
 import koumakan.javaweb.community.entity.DiscussPost;
 import koumakan.javaweb.community.entity.Page;
 import koumakan.javaweb.community.entity.User;
 import koumakan.javaweb.community.service.DiscussPostService;
+import koumakan.javaweb.community.service.LikeService;
 import koumakan.javaweb.community.service.UserService;
+import koumakan.javaweb.community.util.CommunityConstant;
+import koumakan.javaweb.community.util.CommunityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
@@ -27,7 +31,7 @@ import java.util.logging.Logger;
  */
 
 @Controller
-public class HomePageController {
+public class HomePageController implements CommunityConstant {
 
     @Autowired
     @Qualifier("userService")
@@ -36,6 +40,9 @@ public class HomePageController {
     @Autowired
     @Qualifier("discussPostService")
     private DiscussPostService discussPostService;
+
+    @Resource
+    private LikeService likeService;
 
     @RequestMapping(path = "/index", method = RequestMethod.GET)
     public String getIndexPage(Model model, Page page) {
@@ -54,6 +61,10 @@ public class HomePageController {
                 tmp.put("post", cur);
                 User user = userService.findUserById(cur.getUserId());
                 tmp.put("user", user);
+
+                long likeCount = likeService.findEntityLikeCount(ENTITY_TYPE_POST, cur.getId());
+                tmp.put("likeCount", likeCount);
+
                 discussPosts.add(tmp);
             }
         }
