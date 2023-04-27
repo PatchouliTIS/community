@@ -6,8 +6,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import koumakan.javaweb.community.annotation.LoginAuthority;
 import koumakan.javaweb.community.dao.UserMapper;
 import koumakan.javaweb.community.entity.User;
+import koumakan.javaweb.community.service.FollowService;
 import koumakan.javaweb.community.service.LikeService;
 import koumakan.javaweb.community.service.UserService;
+import koumakan.javaweb.community.util.CommunityConstant;
 import koumakan.javaweb.community.util.HostHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.annotations.Result;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.net.SocketTimeoutException;
 
 /**
  * @Package: koumakan.javaweb.community.controller
@@ -33,7 +36,7 @@ import java.io.*;
 
 @Controller
 @RequestMapping("/user")
-public class UserController {
+public class UserController implements CommunityConstant {
 
      private static final Logger LOGGER = LoggerFactory.getLogger(UserController.class);
 
@@ -55,6 +58,9 @@ public class UserController {
 
     @Resource
     private LikeService likeService;
+
+    @Resource
+    private FollowService followService;
 
     @LoginAuthority
     @RequestMapping(path = "/setting", method = RequestMethod.GET)
@@ -149,10 +155,18 @@ public class UserController {
     }
 
 
-
+    /**
+     * 个人主页显示
+     * @param userId
+     * @param model
+     * @return
+     */
     @RequestMapping(path = "/profile/{userId}", method = RequestMethod.GET)
     public String getProfilePage(@PathVariable("userId") int userId, Model model) {
         User user = userService.findUserById(userId);
+
+        User currentLoginUser = hostHandler.getUser();
+
         if(user == null) {
             throw new RuntimeException("查询个人资料失败！该用户不存在！");
         }
@@ -161,11 +175,31 @@ public class UserController {
         model.addAttribute("user", user);
 
 
-        //点赞数量
+        // 点赞数量
         long likeCount = likeService.findUserLikeCount(userId);
         model.addAttribute("likeCount", likeCount);
 
-        return "/site/profile";
+        // 实体关注者的数量
+        long followeeCount = followService.findFolloweeCount(userId,ENTITY_TYPE_USER);
+        model.addAttribute("followeeCount", followeeCount);
+        System.out.println("》》》》》followeeCount:" + followeeCount);
 
+        // 粉丝数量
+        long followerCount = followService.findFollowerCount(ENTITY_TYPE_USER, userId);
+        model.addAttribute("followerCount", followerCount);
+        System.out.println("》》》》》followerCount:" + followerCount);
+
+        // 是否已关注
+        boolean isFollowed;
+        if(currentLoginUser == null) {
+            isFollowed = false;
+        } else {
+            isFollowed = followService.isFollowed(currentLoginUser.getId(), ENTITY_TYPE_USER, userId);
+        }
+        System.out.println("》》》》》isFollowed:" + isFollowed);
+
+        model.addAttribute("hasFollowed", isFollowed);
+
+        return "/site/profile";
     }
 }
