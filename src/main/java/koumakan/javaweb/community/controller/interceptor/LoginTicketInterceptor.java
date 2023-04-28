@@ -52,7 +52,7 @@ public class LoginTicketInterceptor implements HandlerInterceptor {
             // 2. 服务器通过cookie发起查询获得用户信息
             LoginTicket loginTicket = userService.findLoginTicketByTicket(ticket);
 
-            if(loginTicket.getStatus() == 0 && loginTicket.getExpired().after(new Date())) {
+            if(loginTicket != null && loginTicket.getStatus() == 0 && loginTicket.getExpired().after(new Date())) {
                 User user = userService.findUserById(loginTicket.getUserId());
                 // 3. 使用ThreadLocal在服务器端，此次session（对话）持续时间内
                 hostHandler.setUser(user);

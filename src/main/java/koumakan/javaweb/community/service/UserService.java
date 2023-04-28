@@ -1,7 +1,9 @@
 package koumakan.javaweb.community.service;
 
+import com.mysql.cj.log.Log;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
 import jakarta.mail.MessagingException;
 import koumakan.javaweb.community.dao.IUserDao;
 import koumakan.javaweb.community.dao.LoginTicketMapper;
@@ -11,10 +13,13 @@ import koumakan.javaweb.community.entity.User;
 import koumakan.javaweb.community.util.CommunityConstant;
 import koumakan.javaweb.community.util.CommunityUtil;
 import koumakan.javaweb.community.util.MailClient;
+import koumakan.javaweb.community.util.RedisKeyUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -23,6 +28,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Package: koumakan.javaweb.community.service
@@ -58,6 +64,8 @@ public class UserService implements CommunityConstant {
     @Autowired
     private TemplateEngine templateEngine;
 
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
     private LoginTicketMapper loginTicketMapper;
@@ -73,10 +81,41 @@ public class UserService implements CommunityConstant {
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
-    public User findUserById(int userId) {
+    private User getUserCache (int userId) {
+        String userKey = RedisKeyUtil.getUserKey(userId);
+        return (User) redisTemplate.opsForValue().get(userKey);
+    }
+
+    private User setUserCache(int userId) {
         User user = userMapper.selectById(userId);
+
+        String userKey = RedisKeyUtil.getUserKey(userId);
+        redisTemplate.opsForValue().set(userKey, user, 3600, TimeUnit.SECONDS);
         return user;
     }
+
+    private boolean clearCache(int userId) {
+        String userKey = RedisKeyUtil.getUserKey(userId);
+        return redisTemplate.delete(userKey);
+    }
+
+
+    /**
+     * 因为在其他的业务层以及表现层中经常访问这些内容，因此使用Redis存储
+     * 重构：不再使用MySQL而直接使用Redis来存储用户信息
+     * @param userId
+     * @return
+     */
+    public User findUserById(int userId) {
+        // User user = userMapper.selectById(userId);
+        User user = getUserCache(userId);
+        if(user == null) {
+            user = setUserCache(userId);
+        }
+        return user;
+    }
+
+
 
     public Map<String, Object> register(User user) throws MessagingException {
         Map<String, Object> map = new HashMap<>();
@@ -155,6 +194,7 @@ public class UserService implements CommunityConstant {
         }else if(user.getActivationCode().equals(activation_code) == true) {
             // 将用户激活码对比
             userMapper.updateStatus(userId, 1);
+            clearCache(userId);
             return ACTIVATION_SUCCESS;
         }else {
             return ACTIVATION_FAILURE;
@@ -205,7 +245,12 @@ public class UserService implements CommunityConstant {
         loginTicket.setTicket(CommunityUtil.generateUUID());
         loginTicket.setExpired(new Date(System.currentTimeMillis() + expired * 1000));
 
-        loginTicketMapper.insertLoginTicket(loginTicket);
+        // loginTicketMapper.insertLoginTicket(loginTicket);\
+        // 使用Redis存储对应的ticket
+        // 为什么不设置超时时间？  --> 用于后续功能的开发  登出只是改变登录凭证的状态
+        String ticketKey = RedisKeyUtil.getTicketKey(loginTicket.getTicket());
+        redisTemplate.opsForValue().set(ticketKey, loginTicket);
+
 
         // 将ticket作为用户的一种session用于从loginTicket表中快速获取对应用户的登录认证
         map.put("ticket", loginTicket.getTicket());
@@ -214,7 +259,12 @@ public class UserService implements CommunityConstant {
     }
 
     public void logout(String ticket) {
-        loginTicketMapper.updateStatus(ticket, 1);
+        // loginTicketMapper.updateStatus(ticket, 1);
+        // 更改Redis中关于ticket的状态
+        String ticketKey = RedisKeyUtil.getTicketKey(ticket);
+        LoginTicket loginTicket = (LoginTicket) redisTemplate.opsForValue().get(ticketKey);
+        loginTicket.setStatus(1);
+        redisTemplate.opsForValue().set(ticketKey, loginTicket);
     }
 
 
@@ -223,13 +273,17 @@ public class UserService implements CommunityConstant {
             throw new IllegalArgumentException("TICKET为空！");
         }
 
-        LoginTicket loginTicket = loginTicketMapper.selectByTicket(ticket);
-        return loginTicket;
+        // LoginTicket loginTicket = loginTicketMapper.selectByTicket(ticket);
+        String ticketKey = RedisKeyUtil.getTicketKey(ticket);
+        return (LoginTicket) redisTemplate.opsForValue().get(ticketKey);
     }
 
 
     public int updateHeader(int userId, String headerUrl) {
-        return userMapper.updateHeader(userId, headerUrl);
+
+        int rows = userMapper.updateHeader(userId, headerUrl);
+        clearCache(userId);
+        return rows;
     }
 
     public User findUserByName(String name) {

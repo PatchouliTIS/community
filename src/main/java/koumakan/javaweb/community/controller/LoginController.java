@@ -1,6 +1,7 @@
 package koumakan.javaweb.community.controller;
 
 import com.google.code.kaptcha.Producer;
+import jakarta.annotation.Resource;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -9,11 +10,14 @@ import koumakan.javaweb.community.dao.LoginTicketMapper;
 import koumakan.javaweb.community.entity.User;
 import koumakan.javaweb.community.service.UserService;
 import koumakan.javaweb.community.util.CommunityConstant;
+import koumakan.javaweb.community.util.CommunityUtil;
+import koumakan.javaweb.community.util.RedisKeyUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -26,6 +30,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static koumakan.javaweb.community.util.CommunityConstant.DEFAULT_EXPIRED_SECONDS;
 import static koumakan.javaweb.community.util.CommunityConstant.REMEMBER_EXPIRED_SECONDS;
@@ -48,6 +53,9 @@ public class LoginController {
 
     @Value("${server.servlet.context-path}")
     private String ROOT_PATH;
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
 
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
@@ -86,10 +94,23 @@ public class LoginController {
      * @return
      */
     @RequestMapping(path = "/login", method = RequestMethod.POST)
-    public String login(Model model, HttpSession httpSession, HttpServletResponse response,
-                        String username, String password,
-                        String code, boolean rememberMe) {
-        String kaptcha = (String) httpSession.getAttribute("kaptcha");
+    public String login(Model model
+            // , HttpSession httpSession
+            , @CookieValue("kaptchaOwner") String kaptchaOwner
+            , HttpServletResponse response
+            , String username
+            , String password
+            , String code
+            , boolean rememberMe) {
+        // String kaptcha = (String) httpSession.getAttribute("kaptcha");
+        // 从Redis中获取验证码进行登录
+        String kaptcha = null;
+        if(StringUtils.isNotBlank(kaptchaOwner)) {
+            String kaptchaKey = RedisKeyUtil.getKaptchaKey(kaptchaOwner);
+            kaptcha = (String) redisTemplate.opsForValue().get(kaptchaKey);
+        }
+
+
         // 验证码的检查
         if(StringUtils.isBlank(kaptcha)
                 || StringUtils.isBlank(code)
@@ -178,15 +199,37 @@ public class LoginController {
     }
 
 
-
+    /**
+     * 获取当前session中对应用户的验证码
+     * 最初是使用session存储验证码；
+     * 现在重构，使用Redis存储验证码。
+     * @param response
+     * @param session
+     * @throws IOException
+     */
     @RequestMapping(path = "/kaptcha", method = RequestMethod.GET)
-    public void getKaptcha(HttpServletResponse response, HttpSession session) throws IOException {
+    public void getKaptcha(HttpServletResponse response
+            // , HttpSession session
+    ) throws IOException {
         // 1. 生成验证码
         String text = kaptchaProducer.createText();
         BufferedImage image = kaptchaProducer.createImage(text);
 
-        // 2. 将验证码存入session
-        session.setAttribute("kaptcha", text);
+        // 2.1 将验证码存入session
+        // session.setAttribute("kaptcha", text);
+
+        // 2.2 生成验证码的归属者，也就是当前登录的用户
+        //    保存到Cookie中
+        String kaptchaOwner= CommunityUtil.generateUUID();
+        Cookie cookie = new Cookie("kaptchaOwner", kaptchaOwner);
+        cookie.setMaxAge(60);
+        cookie.setPath(ROOT_PATH);
+
+        response.addCookie(cookie);
+
+        // 2.3 生成RedisKey，并写入数据库
+        String kaptchaKey = RedisKeyUtil.getKaptchaKey(kaptchaOwner);
+        redisTemplate.opsForValue().set(kaptchaKey, text, 60, TimeUnit.SECONDS);
 
         // 3. 将验证码图片输出给浏览器
         response.setContentType("image/png");
