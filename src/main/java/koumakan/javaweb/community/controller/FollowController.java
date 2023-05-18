@@ -2,13 +2,17 @@ package koumakan.javaweb.community.controller;
 
 import jakarta.annotation.Resource;
 import koumakan.javaweb.community.annotation.LoginAuthority;
+import koumakan.javaweb.community.entity.Event;
 import koumakan.javaweb.community.entity.Page;
 import koumakan.javaweb.community.entity.User;
+import koumakan.javaweb.community.event.EventProducer;
 import koumakan.javaweb.community.service.FollowService;
 import koumakan.javaweb.community.service.UserService;
 import koumakan.javaweb.community.util.CommunityConstant;
 import koumakan.javaweb.community.util.CommunityUtil;
 import koumakan.javaweb.community.util.HostHandler;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,7 +30,11 @@ import java.util.Map;
  * @Decription:
  */
 @Controller
-public class FollowController {
+public class FollowController implements CommunityConstant {
+
+    @Autowired
+    @Qualifier("eventProducer")
+    private EventProducer eventProducer;
 
     @Resource
     private FollowService followService;
@@ -47,6 +55,15 @@ public class FollowController {
         followService.follow(user.getId(), entityType,entityId);
 
         System.out.println("关注成功！");
+
+        // 触发关注事件
+        Event event = new Event()
+                .setTopic(TOPIC_FOLLOW)
+                .setUserId(user.getId())
+                .setEntityType(entityType)
+                .setEntityId(entityId)
+                .setEntityUserId(entityId);
+        eventProducer.triggerEvent(event);
 
         return CommunityUtil.getJSONString(0, "关注成功！");
     }

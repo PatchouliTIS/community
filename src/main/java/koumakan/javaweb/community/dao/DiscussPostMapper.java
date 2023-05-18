@@ -51,6 +51,4 @@ public interface DiscussPostMapper {
      */
     int updateCommentCount(int postId, int commentCount);
 
-
-
 }

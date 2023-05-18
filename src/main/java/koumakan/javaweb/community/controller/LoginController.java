@@ -85,7 +85,7 @@ public class LoginController {
      *
      *
      * @param model
-     * @param httpSession
+     * @param //httpSession
      * @param response  将服务器生成的session对应的ticket通过cookie传递给客户端让Client保存
      * @param username
      * @param password
@@ -204,7 +204,7 @@ public class LoginController {
      * 最初是使用session存储验证码；
      * 现在重构，使用Redis存储验证码。
      * @param response
-     * @param session
+     * @param //session
      * @throws IOException
      */
     @RequestMapping(path = "/kaptcha", method = RequestMethod.GET)

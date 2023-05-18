@@ -1,11 +1,14 @@
 package koumakan.javaweb.community.config;
 
+import jakarta.annotation.Resource;
 import koumakan.javaweb.community.annotation.LoginAuthority;
 import koumakan.javaweb.community.controller.interceptor.DemoInterceptor;
 import koumakan.javaweb.community.controller.interceptor.LoginAuthorityInterceptor;
 import koumakan.javaweb.community.controller.interceptor.LoginTicketInterceptor;
+import koumakan.javaweb.community.controller.interceptor.NoticeInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -29,6 +32,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Autowired
     private LoginAuthorityInterceptor loginAuthorityInterceptor;
 
+
+    @Resource
+    private NoticeInterceptor noticeInterceptor;
+
     /**
      * 演示如何使用WebMvc的register
      * @param registry 参数自动由SpringMVC传入，然后用这一变量去配置我们的interceptor
@@ -44,6 +51,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/**/*.css", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.js");
 
         registry.addInterceptor(loginAuthorityInterceptor)
+                .excludePathPatterns("/**/*.css", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.js");
+
+        registry.addInterceptor(noticeInterceptor)
                 .excludePathPatterns("/**/*.css", "/**/*.png", "/**/*.jpg", "/**/*.jpeg", "/**/*.js");
     }
 

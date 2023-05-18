@@ -47,6 +47,9 @@ public class ServiceLoginAspect {
         String path = joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint.getSignature().getName();
         String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if(attributes == null) {
+            return ;
+        }
         HttpServletRequest request = attributes.getRequest();
         String ip = request.getRemoteHost();
         LOGGER.info(String.format("用户[%s],在[%s],访问了[%s].", ip, now, path));
